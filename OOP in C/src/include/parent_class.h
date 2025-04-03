@@ -26,7 +26,7 @@
  * 
  */
 typedef struct ParentClassVtbl{
-    void(*example_method)(void *const pVoid);   //! Example method for the class
+    void(*const example_method)(void *const pVoid);   /**< Example method for the class */
 } ParentClassVtbl_t;
 
 /**
@@ -34,9 +34,9 @@ typedef struct ParentClassVtbl{
  * 
  */
 typedef struct ParentClass {
-    const ParentClassVtbl_t *vptr;  //! ptr to the classes vtbl
-    int IntTypeData;                //! Example member of type Int.
-    double DoubleTypeData;          //! Example member of type Double.
+    const ParentClassVtbl_t *vptr;  /**< ptr to the classes vtbl */
+    int IntTypeData;                /**< Example member of type Int. */
+    double DoubleTypeData;          /**< Example member of type Double. */
 } ParentClass_t;
 
 /* Function Declarations */

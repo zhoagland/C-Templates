@@ -29,7 +29,7 @@
  * 
  */
 typedef struct ChildClassVtbl{
-    void(*example_child_method)(void *const pVoid);   //! Example method for the class
+    void(*const example_child_method)(void *const pVoid);   /**< Example method for the class */
 } ChildClassVtbl_t;
 
 /**
@@ -37,10 +37,10 @@ typedef struct ChildClassVtbl{
  * 
  */
 typedef struct ChildClass {
-    ParentClass_t parent;           //! Class this type inherits from.
-    const ChildClassVtbl_t *vptr;   //! ptr to classes specific methods vtbl.
-    int IntTypeData2;               //! Example member of type Int exclusive to this object.
-    double DoubleTypeData2;         //! Example member of type Double exclusive to this object.
+    ParentClass_t parent;           /**< Class this type inherits from. */
+    const ChildClassVtbl_t *vptr;   /**< ptr to classes specific methods vtbl. */
+    int IntTypeData2;               /**< Example member of type Int exclusive to this object. */
+    double DoubleTypeData2;         /**< Example member of type Double exclusive to this object. */
 } ChildClass_t;
 
 /* Function Declarations */
