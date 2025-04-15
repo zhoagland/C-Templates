@@ -81,7 +81,7 @@ int create_csv_file(const char *absolute_path_to_file, int number_of_columns) {
         an "error code".
     */
     if((file_handle = open_csv_file(absolute_path_to_file)) <= 0) {
-        return -1;
+        return errno;
     }
 
     /* Set the column count because it is a new file. */
@@ -105,7 +105,8 @@ int open_csv_file(const char *absolute_path_to_file) {
 
     /* Check to see if we have room to open any more csv files. If not return an invalid handle. */
     if ((s_number_of_open_files+1) > MAX_CONCURRENT_CSV_FILES) {
-        return -1;
+        errno = ENFILE;
+        return errno;
     }
 
     /* Loop through the indexes of the array that stores whether or not an index is free in the main csv array. */
@@ -151,7 +152,8 @@ int close_csv_file(int csv_file_handle) {
 
     /* Check that we have a valid handle and that we have files that are open. */
     if ( (csv_file_index < 0) || (s_number_of_open_files-1 < 0)) {
-        return -1;
+        errno = ENOENT;
+        return errno;
     }
 
     /* Decrement the amount of open files. */
@@ -301,7 +303,7 @@ int insert_row(int csv_file_handle, int row_to_insert_before, int width_of_strin
 	
     /* Check to ensure the row is valid. */
     if(row_to_insert_before < -1) {
-        return -1;
+        row_to_insert_before = 0;
     }
 
     /* If -1 just append the data. */
@@ -381,16 +383,18 @@ int insert_row(int csv_file_handle, int row_to_insert_before, int width_of_strin
  */
 int append_row(int csv_file_handle, int width_of_strings, const char *data_array_to_insert) {
     
-
 	/* Move to the last char in the file */
-    if(fseek(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, 0, SEEK_END)) {
+    if(fseek(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, -1, SEEK_END)) {
         return errno;
     }
 	
 	/* If last char in the file is not a new line add one. */
 	if(fgetc(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file) != '\n') {
-		fprintf(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, "\n");
+		fprintf(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, "\n");	
 	}
+	
+	/* Move back to the end of file */
+	fseek(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, 0, SEEK_END);
 	
     /* Insert new row data. */
     for (size_t idx = 0; idx < s_csv_files[convert_handle_to_index(csv_file_handle)].number_of_columns; idx++) {
@@ -636,4 +640,28 @@ static void go_to_column(int csv_file_handle, int column) {
             continue;
         }
     }
+}
+
+/**
+ * @brief Get the contents of a cell in a csv file 
+ * 
+ * @param csv_file_handle Handle of the csv file to operate on.
+ * @param content_string String to write the contents to.
+ * @param cell Cell struct that specifies the location to clear.
+ * @return 0 on success.
+ */
+int get_cell_contents(int csv_file_handle, char *content_string, cell_t cell) {
+    
+    char read_char[2] = {0};
+
+    /* Move cursor in file to the location to copy. */    
+    go_to_row(csv_file_handle, cell.row);
+    go_to_column(csv_file_handle, cell.column);
+
+    /* Fast forward in the file until we reach the end of the cell */
+    while (((read_char[0] = (char)fgetc(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file)) != ',') && read_char != EOF) {
+        strcat(content_string, read_char);
+    }
+
+    return 0;
 }

@@ -163,6 +163,17 @@ void set_row_count(int csv_file_handle, int row_count);
  */
 int get_row_count(int csv_file_handle);
 
+/**
+ * @brief Get the contents of a cell in a csv file 
+ * 
+ * @param csv_file_handle Handle of the csv file to operate on.
+ * @param content_string String to write the contents to.
+ * @param cell Cell struct that specifies the location to clear.
+ * @return 0 on success.
+ */
+int get_cell_contents(int csv_file_handle, char *content_string, cell_t cell);
+
+
 #ifdef __cplusplus
     }
 #endif
