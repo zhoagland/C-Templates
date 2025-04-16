@@ -17,15 +17,15 @@
 #endif
 
 
-/* Public Includes */
+/* -------------------- Public Includes -------------------- */
 #include <stdint.h>
 
-/* Public Macros/Defines */
+/* -------------------- Public Macros/Defines -------------------- */
 
-/* Public Enums */
+/* -------------------- Public Enums -------------------- */
 
 
-/* Public Structs */
+/* -------------------- Public Structs -------------------- */
 
 /**
  * @brief Struct to encapsulate the row and column of a cell. 0 based indexing for both members.
@@ -36,10 +36,10 @@ typedef struct _cell {
     size_t column;      /**< The column; 0 based indexed. */
 }cell_t;
 
-/* Public (global) Vars */
+/* -------------------- Public (global) Vars -------------------- */
 
 
-/* Public Function Declarations */
+/* -------------------- Public Function Declarations -------------------- */
 
 /* Open / close functions */
 
@@ -94,31 +94,31 @@ int update_cell(int csv_file_handle, const char *data_to_insert, cell_t cell);
  * 
  * @param csv_file_handle Handle of the csv file to operate on.
  * @param row The row in which to update (0 based index).
- * @param width_of_string The memory length allocated for the string.
+ * @param memory_spacing The offset in memory from the base address to the next string address
  * @param data_array_to_insert Pointer to a 2D array of strings containing the data to insert. The length should match the csv column width.
  * @return 0 on success, errno on fail.
  */
-int update_row(int csv_file_handle, int row_to_update, int width_of_string, const char *data_array_to_insert);
+int update_row(int csv_file_handle, int row_to_update, int memory_spacing, const char *data_array_to_insert);
 
 /**
  * @brief Inserts a row of data into a csv file
  * 
  * @param data_array_to_insert Pointer to a 2D array of strings containing the data to insert. The length should match the csv column width.
  * @param row_to_insert_before The row to insert before. -1 indicates insert at the end (append row)
- * @param width_of_string Memory length allocated for the strings.
+ * @param memory_spacing The offset in memory from the base address to the next string address
  * @return 0 on success, errno on fail.
  */
-int insert_row(int csv_file_handle, int row_to_insert_before, int width_of_string, const char *data_array_to_insert);
+int insert_row(int csv_file_handle, int row_to_insert_before, int memory_spacing, const char *data_array_to_insert);
 
 /**
  * @brief Appends a row of data to a csv file.
  * 
  * @param csv_file_handle Handle of the csv file to operate on.
- * @param width_of_strings Memory length allocated for the strings.
- * @param data_array_to_insert Pointer to a 2D array of strings containing the data to insert. The length should match the csv column width.
+ * @param memory_spacing The offset in memory from the base address to the next string address
+ * @param data_array_to_insert Pointer to a 2D array of strings containing the data to insert. The length should match the csv column width. If NULL appends a blank row.
  * @return 0 on success, errno on fail.
  */
-int append_row(int csv_file_handle, int width_of_strings, const char *data_array_to_insert);
+int append_row(int csv_file_handle, int memory_spacing, const char *data_array_to_insert);
 
 /**
  * @brief Deletes the specified row from a csv file.

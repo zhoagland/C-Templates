@@ -8,7 +8,7 @@
 * @copyright Copyright (c) 2025
 * 
 */
-/* Private Includes */
+/* -------------------- Private Includes -------------------- */
 #include "csv.h"
 #include "file_io.h"
 #include <assert.h>
@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-/* Private Macros/Defines */
+/* -------------------- Private Macros/Defines -------------------- */
 
 /** definition for the length of a csv file extension including the period. */
 #define EXTENSION_LENGTH            (4)
@@ -25,9 +25,9 @@
 /** definition of a macro for the csv file extension string. */
 #define CSV_EXTENSION_STRING        ".csv"
 
-/* Private Enums */
+/* -------------------- Private Enums -------------------- */
 
-/* Private Structs */
+/* -------------------- Private Structs -------------------- */
 
 /**
  * @brief Collection of data for a csv file.
@@ -40,7 +40,7 @@ typedef struct _csv_file {
     char absolute_path[FILE_PATH_LENGTH];    /**< Copy of the absolute file path */
 } csv_file_t;
 
-/* Private (static) Vars */
+/* -------------------- Private (static) Vars -------------------- */
 
 /** Array of structs for holding the information for open csv files. */
 static csv_file_t s_csv_files[MAX_CONCURRENT_CSV_FILES] = {0};
@@ -49,7 +49,7 @@ static unsigned int s_number_of_open_files = 0;
 /** Array of flags to know which of the indexes in the struct array is free to use. */
 static unsigned int s_free_indexes[MAX_CONCURRENT_CSV_FILES] = {0};
 
-/* Private (static) Function Declarations */
+/* -------------------- Private (static) Function Declarations */
 
 static int check_for_extension(const char* filename);
 static int calculate_row_count(int csv_file_handle);
@@ -58,11 +58,11 @@ static int convert_handle_to_index(int csv_file_handle);
 static void go_to_row(int csv_file_handle, int row);
 static void go_to_column(int csv_file_handle, int column);
 
-/* Public (global) Vars */
+/* -------------------- Public (global) Vars -------------------- */
 
 extern int errno;
 
-/* Private and Public Function Definitions */
+/* -------------------- Private and Public Function Definitions -------------------- */
 
 /**
  * @brief Create a csv file
@@ -189,7 +189,12 @@ int update_cell(int csv_file_handle, const char *data_to_insert, cell_t cell) {
     FILE *p_temp_file = NULL;
     char read_char = 0;
     char temp_file_name[FILE_PATH_LENGTH] = {0};
-
+	
+	/* If row doesn't exist, append empty rows until the row count is correct */
+	for ( size_t row = get_row_count(csv_file_handle); row < cell.row; row++) {
+		append_row(csv_file_handle, 0, NULL);
+	}
+	
     /* Move cursor in file to where the insertion should be. */    
     go_to_row(csv_file_handle, cell.row);
     go_to_column(csv_file_handle, cell.column);
@@ -291,10 +296,10 @@ int update_row(int csv_file_handle, int row, int width_of_string, const char *da
  * 
  * @param data_array_to_insert Pointer to a 2D array of strings containing the data to insert. The length should match the csv column width.
  * @param row_to_insert_before The row to insert before. -1 indicates insert at the end (append row)
- * @param width_of_string Memory length allocated for the strings.
+ * @param memory_spacing The offset in memory from the base address to the next string address
  * @return 0 on success, errno on fail.
  */
-int insert_row(int csv_file_handle, int row_to_insert_before, int width_of_strings, const char *data_array_to_insert) {
+int insert_row(int csv_file_handle, int row_to_insert_before, int memory_spacing, const char *data_array_to_insert) {
 
     long splice_offset = 0;
     FILE *p_temp_file = NULL;
@@ -308,7 +313,7 @@ int insert_row(int csv_file_handle, int row_to_insert_before, int width_of_strin
 
     /* If -1 just append the data. */
     if(row_to_insert_before == -1) {
-        append_row(csv_file_handle,width_of_strings, data_array_to_insert);
+        append_row(csv_file_handle,memory_spacing, data_array_to_insert);
     }
 
     /* Move cursor in file to where the insertion should be. */    
@@ -334,7 +339,7 @@ int insert_row(int csv_file_handle, int row_to_insert_before, int width_of_strin
 	
     /* Insert new row data. */
     for (size_t idx = 0; idx < s_csv_files[convert_handle_to_index(csv_file_handle)].number_of_columns; idx++) {
-        fprintf(p_temp_file, "%s,", data_array_to_insert+(idx*width_of_strings));
+        fprintf(p_temp_file, "%s,", data_array_to_insert+(idx*memory_spacing));
     }
     
     /* End with new line. */
@@ -377,28 +382,38 @@ int insert_row(int csv_file_handle, int row_to_insert_before, int width_of_strin
  * @brief Appends a row of data to a csv file.
  * 
  * @param csv_file_handle Handle of the csv file to operate on.
- * @param width_of_strings Memory length allocated for the strings.
+ * @param memory_spacing The offset in memory from the base address to the next string address
  * @param data_array_to_insert Pointer to a 2D array of strings containing the data to insert. The length should match the csv column width.
  * @return 0 on success, errno on fail.
  */
-int append_row(int csv_file_handle, int width_of_strings, const char *data_array_to_insert) {
+int append_row(int csv_file_handle, int memory_spacing, const char *data_array_to_insert) {
     
-	/* Move to the last char in the file */
-    if(fseek(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, -1, SEEK_END)) {
-        return errno;
-    }
-	
-	/* If last char in the file is not a new line add one. */
-	if(fgetc(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file) != '\n') {
-		fprintf(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, "\n");	
+	if(get_row_count(csv_file_handle) != 0) {
+		/* Move to the last char in the file */
+	    if(fseek(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, -1, SEEK_END)) {
+	        return errno;
+	    }
+		
+		/* If last char in the file is not a new line add one. */
+		if(fgetc(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file) != '\n') {
+			/* Move back to the end of file */
+			fseek(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, 0, SEEK_END);
+			fprintf(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, "\n");	
+		}
 	}
-	
-	/* Move back to the end of file */
+
+	/* Move to ensure the cursor is at the end of file */
 	fseek(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, 0, SEEK_END);
+	
 	
     /* Insert new row data. */
     for (size_t idx = 0; idx < s_csv_files[convert_handle_to_index(csv_file_handle)].number_of_columns; idx++) {
-        fprintf(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, "%s,", data_array_to_insert+(idx*width_of_strings));
+		if(data_array_to_insert) {
+        	fprintf(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, "%s,", data_array_to_insert+(idx*memory_spacing));
+		}
+		else {
+        	fprintf(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file, ",");
+		}
     }
     
     /* End with new line. */
@@ -584,7 +599,7 @@ static int calculate_column_count(int csv_file_handle) {
     rewind(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file);
 	
 	/* Loop until we have seen the correct amount of new lines. */
-    while ((current_char = (char)fgetc(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file)) != '\n') {
+    while (((current_char = (char)fgetc(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file)) != '\n') && (current_char != EOF)) {
         if(current_char == ',') {
 			column_count++;
 		}
@@ -603,7 +618,9 @@ static int calculate_column_count(int csv_file_handle) {
  * @param row The row number to seek to (0 based index).
  */
 static void go_to_row(int csv_file_handle, int row) {
-
+	
+	char current_char = 0;
+	
 	/* Rewind to begining of file to make sure we count the rows correctly. */
     rewind(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file);
 	
@@ -614,7 +631,7 @@ static void go_to_row(int csv_file_handle, int row) {
 	
 	/* Loop until we have seen the correct amount of new lines. */
     for(size_t file_row = 0; file_row < row; file_row++) {
-        while (fgetc(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file) != '\n') {
+        while (((current_char = (char)fgetc(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file)) != '\n') && (current_char != EOF)) {
             continue;
         }
     }
@@ -627,7 +644,9 @@ static void go_to_row(int csv_file_handle, int row) {
  * @param column The column number to seek to (0 based index).
  */
 static void go_to_column(int csv_file_handle, int column) {
-
+	
+	char current_char = 0;
+	
 	/* if column is zero return immediately */
 	if (column == 0) {
 		return;
@@ -636,7 +655,7 @@ static void go_to_column(int csv_file_handle, int column) {
 	/* This function assumes that we are at the row we want to go into. */
 	/* Loop until we have seen the correct amount of commas. */
     for(size_t file_column = 0; file_column < column; file_column++) {
-        while (fgetc(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file) != ',') {
+        while (((current_char = (char)fgetc(s_csv_files[convert_handle_to_index(csv_file_handle)].p_file)) != ',') && (current_char != EOF)) {
             continue;
         }
     }
